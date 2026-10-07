@@ -1,0 +1,21 @@
+# Build
+target/
+HELP.md
+
+# IDEs
+.idea/
+*.iml
+.vscode/
+.project
+.classpath
+.settings/
+
+# Variáveis locais e segredos
+.env
+*.env
+!.env.example
+
+# Sistema e logs
+.DS_Store
+Thumbs.db
+*.log

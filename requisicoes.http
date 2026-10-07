@@ -1,0 +1,150 @@
+### Requisições de teste da API FocusLeaf
+### Abra no VS Code com a extensão "REST Client" e clique em "Send Request" acima de cada bloco.
+### Execute primeiro o cadastro (1): as demais requisições usam o id retornado por ele.
+
+@baseUrl = http://localhost:8080
+@conteudoId = {{criar.response.body.$.id}}
+@sessaoId = {{iniciar.response.body.$.id}}
+@leitor = ana
+
+
+### 1. Cadastrar um conteúdo dividido em blocos
+# @name criar
+POST {{baseUrl}}/api/conteudos
+Content-Type: application/json
+
+{
+  "titulo": "Como a memória guarda o que estudamos",
+  "autor": "Equipe FocusLeaf",
+  "descricao": "Texto de exemplo dividido em três blocos curtos.",
+  "blocos": [
+    {
+      "titulo": "Atenção vem primeiro",
+      "texto": "Antes de ser lembrada, uma informação precisa ser percebida. Quando a atenção se divide entre o texto, as abas abertas e as notificações, pouca coisa chega a ser processada com profundidade. Por isso, ler um trecho de cada vez, sem distrações, aumenta a chance de o conteúdo ser realmente compreendido."
+    },
+    {
+      "titulo": "Pequenas partes, menos cansaço",
+      "texto": "Textos longos exigem um esforço contínuo que cansa rapidamente. Dividir o material em blocos menores cria pontos naturais de parada e dá ao leitor a sensação de progresso. Cada bloco concluído funciona como uma pequena meta atingida."
+    },
+    {
+      "titulo": "Revisar fixa o aprendizado",
+      "texto": "A memória de longo prazo se fortalece quando voltamos ao conteúdo em intervalos. Revisões curtas e espaçadas tendem a ser mais eficazes do que uma única leitura longa feita de uma só vez."
+    }
+  ]
+}
+
+
+### 2. Listar conteúdos (resumo, sem o texto dos blocos)
+GET {{baseUrl}}/api/conteudos
+
+
+### 3. Detalhar o conteúdo com todos os blocos
+GET {{baseUrl}}/api/conteudos/{{conteudoId}}
+
+
+### 4. Listar apenas os blocos
+GET {{baseUrl}}/api/conteudos/{{conteudoId}}/blocos
+
+
+### 5. Ler o bloco 1 (modo foco: um bloco por vez, com anterior/próximo)
+GET {{baseUrl}}/api/conteudos/{{conteudoId}}/blocos/1
+
+
+### 6. Ler o bloco 2
+GET {{baseUrl}}/api/conteudos/{{conteudoId}}/blocos/2
+
+
+### 7. Atualizar o conteúdo (substitui título, dados e todos os blocos)
+PUT {{baseUrl}}/api/conteudos/{{conteudoId}}
+Content-Type: application/json
+
+{
+  "titulo": "Como a memória guarda o que estudamos (revisado)",
+  "autor": "Equipe FocusLeaf",
+  "blocos": [
+    { "titulo": "Atenção vem primeiro", "texto": "Ler um trecho de cada vez, sem distrações, ajuda a compreender melhor o que está sendo estudado." },
+    { "titulo": "Pequenas partes, menos cansaço", "texto": "Blocos menores criam pontos de parada e dão ao leitor a sensação de progresso a cada etapa concluída." },
+    { "titulo": "Revisar fixa o aprendizado", "texto": "Revisões curtas e espaçadas fortalecem a memória de longo prazo mais do que uma única leitura longa." }
+  ]
+}
+
+
+### 8. Erro esperado (400): título vazio e nenhum bloco
+POST {{baseUrl}}/api/conteudos
+Content-Type: application/json
+
+{
+  "titulo": "",
+  "blocos": []
+}
+
+
+### 9. Erro esperado (404): bloco que não existe
+GET {{baseUrl}}/api/conteudos/{{conteudoId}}/blocos/99
+
+
+### ================= SESSÕES DE LEITURA (Passo 3) =================
+### Fluxo sugerido: 10 → 11 → 12 → 13 → 14 → 15 → 16 → 17 → 18
+
+
+### 10. Iniciar uma sessão de leitura (o leitor começa no bloco 1)
+# @name iniciar
+POST {{baseUrl}}/api/sessoes
+Content-Type: application/json
+
+{
+  "conteudoId": "{{conteudoId}}",
+  "leitor": "{{leitor}}"
+}
+
+
+### 11. Concluir o bloco 1
+POST {{baseUrl}}/api/sessoes/{{sessaoId}}/blocos/1/concluir
+
+
+### 12. Concluir o bloco 2
+POST {{baseUrl}}/api/sessoes/{{sessaoId}}/blocos/2/concluir
+
+
+### 13. Consultar a sessão (métricas: duração, palavras lidas, velocidade)
+GET {{baseUrl}}/api/sessoes/{{sessaoId}}
+
+
+### 14. Erro esperado (409): iniciar outra sessão com esta ainda aberta
+POST {{baseUrl}}/api/sessoes
+Content-Type: application/json
+
+{
+  "conteudoId": "{{conteudoId}}",
+  "leitor": "{{leitor}}"
+}
+
+
+### 15. Abandonar a sessão (registra o ponto de abandono: bloco 3)
+POST {{baseUrl}}/api/sessoes/{{sessaoId}}/abandonar
+
+
+### 16. Erro esperado (409): concluir bloco em sessão já encerrada
+POST {{baseUrl}}/api/sessoes/{{sessaoId}}/blocos/3/concluir
+
+
+### 17. Progresso do leitor no conteúdo (soma todas as sessões)
+GET {{baseUrl}}/api/progresso?leitor={{leitor}}&conteudoId={{conteudoId}}
+
+
+### 18. Listar as sessões do leitor
+GET {{baseUrl}}/api/sessoes?leitor={{leitor}}
+
+
+### ================= OUTROS =================
+
+
+### 19. Identificação da instância e health check
+GET {{baseUrl}}/api/info
+
+###
+GET {{baseUrl}}/actuator/health
+
+
+### 20. Excluir o conteúdo (execute por último)
+DELETE {{baseUrl}}/api/conteudos/{{conteudoId}}

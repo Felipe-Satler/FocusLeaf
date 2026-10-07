@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>FocusLeaf</title>
+    <meta name="description" content="Leitura com foco. Aprendizado de verdade.">
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M4 20C4 10 10 4 20 4c0 10-6 16-16 16z' fill='%232F6B4A'/%3E%3C/svg%3E">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Literata:opsz,wght@7..72,400;7..72,600&display=swap">
+    <link rel="stylesheet" href="css/estilos.css">
+</head>
+<body data-tela="biblioteca">
+
+<header class="topo">
+    <a class="marca" href="/">
+        <svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true">
+            <path d="M4 20C4 10 10 4 20 4c0 10-6 16-16 16z" fill="currentColor"/>
+            <path d="M5 19L14.5 9.5" stroke="var(--folha)" stroke-width="1.6" stroke-linecap="round"/>
+        </svg>
+        FocusLeaf
+    </a>
+    <p class="slogan">Leitura com foco. Aprendizado de verdade.</p>
+    <span id="ambiente" class="ambiente" hidden></span>
+</header>
+
+<main>
+
+    <!-- Biblioteca: lista de textos e cadastro -->
+    <section id="tela-biblioteca" aria-labelledby="titulo-biblioteca">
+
+        <form id="form-leitor" class="leitor">
+            <label for="campo-leitor">Seu apelido de leitor</label>
+            <div class="linha">
+                <input id="campo-leitor" name="leitor" maxlength="60" autocomplete="nickname" placeholder="ex.: ana">
+                <button type="submit">Salvar apelido</button>
+            </div>
+            <p class="ajuda">Seu progresso fica guardado com esse apelido. Não há senha.</p>
+        </form>
+
+        <div class="cabecalho-lista">
+            <h1 id="titulo-biblioteca">Seus textos</h1>
+            <button id="botao-novo" type="button">Adicionar texto</button>
+        </div>
+
+        <form id="form-conteudo" class="cadastro" hidden>
+            <h2>Novo texto</h2>
+            <label>Título
+                <input id="campo-titulo" required maxlength="200">
+            </label>
+            <label>Autor <span class="opcional">(opcional)</span>
+                <input id="campo-autor" maxlength="120">
+            </label>
+            <label>Descrição <span class="opcional">(opcional)</span>
+                <input id="campo-descricao" maxlength="1000">
+            </label>
+            <label>Texto
+                <textarea id="campo-texto" rows="10" required></textarea>
+            </label>
+            <p class="ajuda">
+                Deixe uma linha em branco entre um bloco e outro. Para dar nome a um bloco,
+                comece com <code># Nome do bloco</code> na primeira linha dele.
+            </p>
+            <p id="contagem-blocos" class="contagem" aria-live="polite">Nenhum bloco ainda.</p>
+            <ul id="erros-formulario" class="erros" hidden></ul>
+            <div class="linha">
+                <button type="submit" class="primario">Salvar texto</button>
+                <button id="botao-cancelar" type="button" class="discreto">Cancelar</button>
+            </div>
+        </form>
+
+        <p id="lista-vazia" class="vazio" hidden>
+            Nenhum texto ainda. Adicione o primeiro para começar a ler em blocos.
+        </p>
+        <ul id="lista-conteudos" class="lista"></ul>
+    </section>
+
+    <!-- Leitura: um bloco por vez -->
+    <section id="tela-leitura" aria-label="Leitura" hidden>
+        <div class="barra-leitura">
+            <div class="posicao">
+                <span id="leitura-posicao"></span>
+                <div id="caule" class="caule" aria-hidden="true"></div>
+            </div>
+            <div class="controles">
+                <span id="cronometro" class="cronometro" title="Tempo desta sessão">00:00</span>
+                <button id="fonte-menor" type="button" aria-label="Diminuir o texto">A−</button>
+                <button id="fonte-maior" type="button" aria-label="Aumentar o texto">A+</button>
+                <button id="botao-pausar" type="button">Pausar</button>
+                <button id="botao-encerrar" type="button" class="discreto">Encerrar</button>
+            </div>
+        </div>
+
+        <article class="folha">
+            <p id="leitura-conteudo" class="titulo-conteudo"></p>
+            <h2 id="leitura-titulo-bloco" tabindex="-1"></h2>
+            <div id="leitura-texto" class="texto"></div>
+            <p id="leitura-estimativa" class="estimativa"></p>
+        </article>
+
+        <nav class="navegacao" aria-label="Navegação entre blocos">
+            <button id="botao-anterior" type="button">Bloco anterior</button>
+            <button id="botao-concluir" type="button" class="primario">Concluir bloco</button>
+        </nav>
+    </section>
+
+    <!-- Resumo da sessão -->
+    <section id="tela-resumo" aria-labelledby="resumo-titulo" hidden>
+        <article class="folha">
+            <p id="resumo-conteudo" class="titulo-conteudo"></p>
+            <h2 id="resumo-titulo" tabindex="-1"></h2>
+            <div id="resumo-caule" class="caule" aria-hidden="true"></div>
+            <dl id="resumo-metricas" class="metricas"></dl>
+            <button id="botao-voltar" type="button" class="primario">Voltar aos textos</button>
+        </article>
+    </section>
+
+</main>
+
+<div id="aviso" class="aviso" role="status" aria-live="polite" hidden></div>
+
+<script src="js/app.js"></script>
+</body>
+</html>

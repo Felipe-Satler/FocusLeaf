@@ -1,0 +1,563 @@
+/* FocusLeaf — estilos da interface
+   Paleta de baixo brilho para leitura longa; modo escuro automático. */
+
+:root {
+    --fundo: #E6ECE3;
+    --folha: #F8FAF5;
+    --tinta: #1E2922;
+    --tinta-suave: #4E5D53;
+    --seiva: #2F6B4A;
+    --seiva-forte: #24553A;
+    --sobre-seiva: #F8FAF5;
+    --broto: #C6DAC0;
+    --linha: #C9D3C5;
+    --ambar: #8A5A10;
+    --erro: #A1392A;
+    --sobre-erro: #FFFFFF;
+
+    --fonte-leitura: "Literata", Georgia, "Times New Roman", serif;
+    --fonte-interface: "Atkinson Hyperlegible", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    --tamanho-texto: 19px;
+
+    color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+    :root {
+        --fundo: #121813;
+        --folha: #1A221C;
+        --tinta: #DCE5D9;
+        --tinta-suave: #A2B1A3;
+        --seiva: #7FBF95;
+        --seiva-forte: #9DD1AE;
+        --sobre-seiva: #0F1A12;
+        --broto: #2E4033;
+        --linha: #2F3C32;
+        --ambar: #E2B35C;
+        --erro: #F0907E;
+        --sobre-erro: #1A0E0B;
+
+        color-scheme: dark;
+    }
+}
+
+*, *::before, *::after {
+    box-sizing: border-box;
+}
+
+[hidden] {
+    display: none !important;
+}
+
+html {
+    -webkit-text-size-adjust: 100%;
+}
+
+body {
+    margin: 0;
+    background: var(--fundo);
+    color: var(--tinta);
+    font-family: var(--fonte-interface);
+    font-size: 16px;
+    line-height: 1.5;
+}
+
+/* ---------- Cabeçalho ---------- */
+
+.topo {
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 28px 16px 8px;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 4px 16px;
+}
+
+.marca {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--seiva);
+    font-family: var(--fonte-leitura);
+    font-size: 26px;
+    font-weight: 600;
+    text-decoration: none;
+    letter-spacing: -0.01em;
+}
+
+.marca svg {
+    align-self: center;
+}
+
+.slogan {
+    margin: 0;
+    color: var(--tinta-suave);
+    font-size: 15px;
+}
+
+.ambiente {
+    margin-left: auto;
+    padding: 2px 10px;
+    border: 1px solid currentColor;
+    border-radius: 999px;
+    color: var(--tinta-suave);
+    font-size: 13px;
+    white-space: nowrap;
+}
+
+.ambiente[data-ambiente="staging"] {
+    color: var(--ambar);
+}
+
+.ambiente[data-ambiente="producao"] {
+    color: var(--seiva);
+}
+
+main {
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 16px 16px 72px;
+}
+
+/* ---------- Formulários e botões ---------- */
+
+label {
+    display: grid;
+    gap: 6px;
+    font-weight: 700;
+    font-size: 15px;
+}
+
+.opcional {
+    font-weight: 400;
+    color: var(--tinta-suave);
+}
+
+input,
+textarea {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid var(--linha);
+    border-radius: 6px;
+    background: var(--folha);
+    color: var(--tinta);
+    font: inherit;
+    font-weight: 400;
+}
+
+textarea {
+    min-height: 220px;
+    resize: vertical;
+    font-family: var(--fonte-leitura);
+    font-size: 17px;
+    line-height: 1.6;
+}
+
+button {
+    padding: 10px 16px;
+    border: 1px solid var(--linha);
+    border-radius: 6px;
+    background: transparent;
+    color: var(--tinta);
+    font: inherit;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+button:hover {
+    border-color: var(--tinta-suave);
+}
+
+button.primario {
+    background: var(--seiva);
+    border-color: var(--seiva);
+    color: var(--sobre-seiva);
+}
+
+button.primario:hover {
+    background: var(--seiva-forte);
+    border-color: var(--seiva-forte);
+}
+
+button.discreto {
+    border-color: transparent;
+    color: var(--tinta-suave);
+}
+
+button.discreto:hover {
+    color: var(--tinta);
+    text-decoration: underline;
+}
+
+button:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+:focus-visible {
+    outline: 3px solid var(--seiva);
+    outline-offset: 2px;
+}
+
+.linha {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.linha input {
+    flex: 1 1 220px;
+    width: auto;
+}
+
+.ajuda {
+    margin: 0;
+    color: var(--tinta-suave);
+    font-size: 14px;
+}
+
+code {
+    font-family: var(--fonte-leitura);
+    background: var(--broto);
+    padding: 0 4px;
+    border-radius: 3px;
+}
+
+/* ---------- Biblioteca ---------- */
+
+.leitor {
+    display: grid;
+    gap: 8px;
+    padding-bottom: 24px;
+    border-bottom: 1px solid var(--linha);
+}
+
+.cabecalho-lista {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin: 28px 0 16px;
+}
+
+h1 {
+    margin: 0;
+    font-family: var(--fonte-leitura);
+    font-size: 30px;
+    font-weight: 600;
+    line-height: 1.2;
+}
+
+.cadastro {
+    display: grid;
+    gap: 16px;
+    margin-bottom: 24px;
+    padding: 20px;
+    background: var(--folha);
+    border: 1px solid var(--linha);
+    border-radius: 10px;
+}
+
+.cadastro h2 {
+    margin: 0;
+    font-family: var(--fonte-leitura);
+    font-size: 22px;
+    font-weight: 600;
+}
+
+.contagem {
+    margin: 0;
+    font-weight: 700;
+    color: var(--seiva);
+}
+
+.erros {
+    margin: 0;
+    padding-left: 20px;
+    color: var(--erro);
+}
+
+.vazio {
+    color: var(--tinta-suave);
+}
+
+.lista {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.item {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: start;
+    gap: 12px 24px;
+    padding: 20px 0;
+    border-top: 1px solid var(--linha);
+}
+
+.item h3 {
+    margin: 0 0 4px;
+    font-family: var(--fonte-leitura);
+    font-size: 21px;
+    font-weight: 600;
+    line-height: 1.3;
+}
+
+.meta,
+.descricao {
+    margin: 0;
+    color: var(--tinta-suave);
+    font-size: 15px;
+}
+
+.descricao {
+    margin-top: 6px;
+    max-width: 60ch;
+}
+
+.andamento {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 10px;
+    font-size: 14px;
+    color: var(--tinta-suave);
+}
+
+.item-acoes {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 4px;
+}
+
+/* ---------- Caule de folhas: um bloco = uma folha ---------- */
+
+.caule {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    width: fit-content;
+    max-width: 100%;
+    padding: 5px;
+    /* o caule: uma linha fina atrás das folhas */
+    background: linear-gradient(var(--linha), var(--linha)) center / 100% 2px no-repeat;
+}
+
+/* O canto arredondado em diagonal forma a folha; o giro deixa a ponta para cima,
+   alternando os lados como folhas num ramo. */
+.folhinha {
+    width: 18px;
+    height: 18px;
+    border-radius: 0 100% 0 100%;
+    background: var(--broto);
+    transform: rotate(-75deg);
+    transition: background-color 0.5s ease;
+}
+
+.folhinha:nth-child(even) {
+    transform: scaleX(-1) rotate(-75deg);
+}
+
+.folhinha.lida {
+    background: var(--seiva);
+}
+
+.folhinha.atual {
+    box-shadow: 0 0 0 2px var(--fundo), 0 0 0 4px var(--seiva);
+}
+
+.caule.mini {
+    gap: 4px;
+    padding: 2px;
+    background: none;
+}
+
+.caule.mini .folhinha {
+    width: 12px;
+    height: 12px;
+}
+
+/* ---------- Leitura ---------- */
+
+.barra-leitura {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 12px 0;
+    margin-bottom: 8px;
+    background: var(--fundo);
+}
+
+.posicao {
+    display: grid;
+    gap: 8px;
+    font-size: 15px;
+    color: var(--tinta-suave);
+}
+
+.controles {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+}
+
+.controles button {
+    padding: 8px 12px;
+}
+
+.cronometro {
+    min-width: 5ch;
+    margin-right: 6px;
+    color: var(--tinta-suave);
+    font-variant-numeric: tabular-nums;
+}
+
+.folha {
+    padding: clamp(24px, 6vw, 56px);
+    background: var(--folha);
+    border: 1px solid var(--linha);
+    border-radius: 10px;
+}
+
+.titulo-conteudo {
+    margin: 0 0 10px;
+    color: var(--tinta-suave);
+    font-size: 15px;
+}
+
+.folha h2 {
+    margin: 0 0 24px;
+    font-family: var(--fonte-leitura);
+    font-size: 28px;
+    font-weight: 600;
+    line-height: 1.25;
+}
+
+.folha h2:focus {
+    outline: none;
+}
+
+.texto {
+    max-width: 64ch;
+    font-family: var(--fonte-leitura);
+    font-size: var(--tamanho-texto);
+    line-height: 1.75;
+    white-space: pre-line;
+    hyphens: auto;
+    overflow-wrap: break-word;
+}
+
+.estimativa {
+    margin: 32px 0 0;
+    color: var(--tinta-suave);
+    font-size: 14px;
+}
+
+.navegacao {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    margin-top: 16px;
+}
+
+/* ---------- Resumo ---------- */
+
+.metricas {
+    display: grid;
+    grid-template-columns: max-content 1fr;
+    align-items: baseline;
+    gap: 10px 28px;
+    margin: 28px 0 32px;
+}
+
+.metricas dt {
+    color: var(--tinta-suave);
+    font-size: 15px;
+}
+
+.metricas dd {
+    margin: 0;
+    font-family: var(--fonte-leitura);
+    font-size: 22px;
+}
+
+#tela-resumo .caule .folhinha {
+    width: 22px;
+    height: 22px;
+}
+
+/* Modo foco: durante a leitura, só o texto e os controles ficam na tela. */
+body[data-tela="leitura"] .slogan,
+body[data-tela="leitura"] .ambiente {
+    display: none;
+}
+
+body[data-tela="leitura"] .topo {
+    padding-bottom: 0;
+}
+
+/* ---------- Avisos ---------- */
+
+.aviso {
+    position: fixed;
+    left: 50%;
+    bottom: 20px;
+    z-index: 10;
+    transform: translateX(-50%);
+    width: max-content;
+    max-width: calc(100% - 32px);
+    padding: 12px 18px;
+    border-radius: 8px;
+    background: var(--tinta);
+    color: var(--folha);
+    font-size: 15px;
+}
+
+.aviso[data-tipo="erro"] {
+    background: var(--erro);
+    color: var(--sobre-erro);
+}
+
+/* ---------- Telas pequenas ---------- */
+
+@media (max-width: 560px) {
+    .item {
+        grid-template-columns: 1fr;
+    }
+
+    .item-acoes {
+        flex-direction: row;
+        flex-wrap: wrap;
+    }
+
+    .ambiente {
+        margin-left: 0;
+    }
+
+    .folha h2 {
+        font-size: 24px;
+    }
+
+    .navegacao button {
+        flex: 1;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .folhinha {
+        transition: none;
+    }
+}
