@@ -30,18 +30,30 @@
     <!-- Biblioteca: lista de textos e cadastro -->
     <section id="tela-biblioteca" aria-labelledby="titulo-biblioteca">
 
-        <form id="form-leitor" class="leitor">
-            <label for="campo-leitor">Seu apelido de leitor</label>
-            <div class="linha">
-                <input id="campo-leitor" name="leitor" maxlength="60" autocomplete="nickname" placeholder="ex.: ana">
-                <button type="submit">Salvar apelido</button>
-            </div>
-            <p class="ajuda">Seu progresso fica guardado com esse apelido. Não há senha.</p>
-        </form>
+        <div class="leitor">
+            <p id="leitor-atual" class="leitor-atual" hidden>
+                Lendo como <strong id="leitor-nome"></strong>
+                <button id="botao-trocar-leitor" type="button" class="link">Trocar apelido</button>
+            </p>
+            <form id="form-leitor" class="form-leitor">
+                <label for="campo-leitor">Seu apelido de leitor</label>
+                <div class="linha">
+                    <input id="campo-leitor" name="leitor" maxlength="60" autocomplete="nickname" placeholder="ex.: ana">
+                    <button type="submit">Salvar apelido</button>
+                    <button id="botao-cancelar-leitor" type="button" class="discreto" hidden>Cancelar</button>
+                </div>
+                <p class="ajuda">Seu progresso fica guardado com esse apelido. Não há senha.</p>
+            </form>
+        </div>
 
         <div class="cabecalho-lista">
             <h1 id="titulo-biblioteca">Seus textos</h1>
             <button id="botao-novo" type="button">Adicionar texto</button>
+        </div>
+
+        <div id="busca" class="busca" role="search" hidden>
+            <label for="campo-busca" class="oculto">Buscar textos</label>
+            <input id="campo-busca" type="search" placeholder="Buscar por título ou autor" autocomplete="off">
         </div>
 
         <form id="form-conteudo" class="cadastro" hidden>
@@ -65,14 +77,16 @@
             <p id="contagem-blocos" class="contagem" aria-live="polite">Nenhum bloco ainda.</p>
             <ul id="erros-formulario" class="erros" hidden></ul>
             <div class="linha">
-                <button type="submit" class="primario">Salvar texto</button>
+                <button id="botao-salvar-texto" type="submit" class="primario">Salvar texto</button>
                 <button id="botao-cancelar" type="button" class="discreto">Cancelar</button>
             </div>
         </form>
 
+        <p id="lista-carregando" class="vazio">Carregando seus textos…</p>
         <p id="lista-vazia" class="vazio" hidden>
             Nenhum texto ainda. Adicione o primeiro para começar a ler em blocos.
         </p>
+        <p id="busca-vazia" class="vazio" hidden></p>
         <ul id="lista-conteudos" class="lista"></ul>
     </section>
 
@@ -103,6 +117,7 @@
             <button id="botao-anterior" type="button">Bloco anterior</button>
             <button id="botao-concluir" type="button" class="primario">Concluir bloco</button>
         </nav>
+        <p class="atalhos">Use as setas <kbd>←</kbd> e <kbd>→</kbd> do teclado para voltar e avançar.</p>
     </section>
 
     <!-- Resumo da sessão -->

@@ -11,11 +11,17 @@ const CHAVE_FONTE = 'focusleaf.tamanhoTexto';
 const FONTE_MINIMA = 16;
 const FONTE_MAXIMA = 26;
 
+const TITULO_PAGINA = 'FocusLeaf';
+
 const estado = {
     leitor: '',
     leitura: null,      // { conteudoId, titulo, sessao, bloco }
     cronometro: null,
     tamanhoTexto: 19,
+    conteudos: [],      // última lista recebida da API
+    progressos: [],     // progresso do leitor em cada conteúdo (mesma ordem)
+    busca: '',
+    ocupado: false,     // impede duas ações de leitura ao mesmo tempo (clique duplo, teclado)
 };
 
 const $ = (id) => document.getElementById(id);
@@ -79,6 +85,43 @@ function duracaoPorExtenso(segundos) {
     return resto === 0 ? textoMinutos : `${textoMinutos} e ${plural(resto, 'segundo', 'segundos')}`;
 }
 
+/** Minúsculas e sem acentos, para a busca encontrar "memorias" em "Memórias". */
+function normalizar(texto) {
+    return (texto || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
+}
+
+/**
+ * Desabilita o botão enquanto a ação roda, mostrando um texto de espera.
+ * Evita cliques duplos e mostra que algo está acontecendo enquanto o servidor responde.
+ */
+async function enquantoOcupado(botao, textoOcupado, acao) {
+    if (botao.getAttribute('aria-busy') === 'true') return;
+    const textoOriginal = botao.textContent;
+    botao.disabled = true;
+    botao.setAttribute('aria-busy', 'true');
+    botao.textContent = textoOcupado;
+    try {
+        await acao();
+    } finally {
+        botao.disabled = false;
+        botao.removeAttribute('aria-busy');
+        botao.textContent = textoOriginal;
+    }
+}
+
+/** Executa uma ação da tela de leitura de cada vez (botões e atalhos de teclado). */
+async function acaoDeLeitura(acao) {
+    if (estado.ocupado) return;
+    estado.ocupado = true;
+    $('tela-leitura').setAttribute('aria-busy', 'true');
+    try {
+        await acao();
+    } finally {
+        estado.ocupado = false;
+        $('tela-leitura').removeAttribute('aria-busy');
+    }
+}
+
 /* ---------- Comunicação com a API ---------- */
 
 async function api(caminho, opcoes = {}) {
@@ -125,6 +168,7 @@ function mostrarTela(nome) {
         $(`tela-${tela}`).hidden = tela !== nome;
     }
     document.body.dataset.tela = nome;
+    if (nome !== 'leitura') document.title = TITULO_PAGINA;
     $('aviso').hidden = true;
     window.scrollTo(0, 0);
 }
@@ -138,7 +182,9 @@ function preencherCaule(container, total, lidos, atual) {
         let classe = 'folhinha';
         if (conjuntoLidos.has(ordem)) classe += ' lida';
         if (ordem === atual) classe += ' atual';
-        folhas.push(elemento('span', { class: classe }));
+        const folha = elemento('span', { class: classe });
+        folha.style.setProperty('--i', ordem - 1);   // usado no atraso da animação do resumo
+        folhas.push(folha);
     }
     container.replaceChildren(...folhas);
     return container;
@@ -167,12 +213,27 @@ function definirLeitor(valor) {
     guardar(CHAVE_LEITOR, estado.leitor);
 }
 
+/**
+ * Com apelido salvo, mostra só a linha "Lendo como ...". O formulário aparece
+ * quando ainda não há apelido ou quando a pessoa pede para trocar.
+ */
+function mostrarLeitor(editando) {
+    const temLeitor = Boolean(estado.leitor);
+    const mostrarFormulario = editando || !temLeitor;
+    $('leitor-nome').textContent = estado.leitor;
+    $('leitor-atual').hidden = mostrarFormulario;
+    $('form-leitor').hidden = !mostrarFormulario;
+    $('botao-cancelar-leitor').hidden = !temLeitor;
+}
+
 function exigirLeitor() {
     if (!estado.leitor && $('campo-leitor').value.trim()) {
         definirLeitor($('campo-leitor').value);
+        mostrarLeitor(false);
     }
     if (estado.leitor) return true;
     avisar('Escolha um apelido de leitor antes de começar a ler.', 'erro');
+    mostrarLeitor(true);
     $('campo-leitor').focus();
     return false;
 }
@@ -180,6 +241,19 @@ function exigirLeitor() {
 function iniciarLeitor() {
     estado.leitor = lerArmazenado(CHAVE_LEITOR) || '';
     $('campo-leitor').value = estado.leitor;
+    mostrarLeitor(false);
+
+    $('botao-trocar-leitor').addEventListener('click', () => {
+        mostrarLeitor(true);
+        $('campo-leitor').select();
+        $('campo-leitor').focus();
+    });
+
+    $('botao-cancelar-leitor').addEventListener('click', () => {
+        $('campo-leitor').value = estado.leitor;
+        mostrarLeitor(false);
+        $('botao-trocar-leitor').focus();
+    });
 
     $('form-leitor').addEventListener('submit', (evento) => {
         evento.preventDefault();
@@ -188,6 +262,7 @@ function iniciarLeitor() {
             return;
         }
         definirLeitor($('campo-leitor').value);
+        mostrarLeitor(false);
         avisar(`Apelido salvo. Você está lendo como ${estado.leitor}.`);
         carregarConteudos();
     });
@@ -200,6 +275,7 @@ async function carregarConteudos() {
     try {
         conteudos = await api('/api/conteudos');
     } catch (erro) {
+        $('lista-carregando').textContent = 'Não foi possível carregar os textos.';
         avisar(erro.message, 'erro');
         return;
     }
@@ -211,10 +287,26 @@ async function carregarConteudos() {
             : Promise.resolve(null)
     )));
 
-    $('lista-vazia').hidden = conteudos.length > 0;
-    $('lista-conteudos').replaceChildren(
-        ...conteudos.map((conteudo, indice) => itemConteudo(conteudo, progressos[indice]))
-    );
+    estado.conteudos = conteudos;
+    estado.progressos = progressos;
+    $('lista-carregando').hidden = true;
+    renderizarLista();
+}
+
+/** Monta a lista aplicando a busca por título, autor ou descrição. */
+function renderizarLista() {
+    const termo = normalizar(estado.busca);
+    const itens = estado.conteudos
+        .map((conteudo, indice) => ({ conteudo, progresso: estado.progressos[indice] }))
+        .filter(({ conteudo }) => !termo
+            || normalizar(`${conteudo.titulo} ${conteudo.autor || ''} ${conteudo.descricao || ''}`).includes(termo));
+
+    const haConteudos = estado.conteudos.length > 0;
+    $('lista-vazia').hidden = haConteudos;
+    $('busca').hidden = !haConteudos;
+    $('busca-vazia').hidden = !(haConteudos && itens.length === 0);
+    $('busca-vazia').textContent = `Nenhum texto encontrado para "${estado.busca.trim()}".`;
+    $('lista-conteudos').replaceChildren(...itens.map(({ conteudo, progresso }) => itemConteudo(conteudo, progresso)));
 }
 
 function itemConteudo(conteudo, progresso) {
@@ -229,13 +321,24 @@ function itemConteudo(conteudo, progresso) {
 
     let andamento = null;
     if (progresso && progresso.blocosConcluidos.length > 0) {
+        const lidos = progresso.blocosConcluidos.length;
         andamento = elemento('div', { class: 'andamento' },
             preencherCaule(elemento('div', { class: 'caule mini', 'aria-hidden': 'true' }),
                 progresso.totalBlocos, progresso.blocosConcluidos, null),
             elemento('span', {
-                text: `${progresso.blocosConcluidos.length} de ${plural(progresso.totalBlocos, 'bloco lido', 'blocos lidos')}`,
+                text: lidos === progresso.totalBlocos
+                    ? 'Todos os blocos lidos'
+                    : `${lidos} de ${plural(progresso.totalBlocos, 'bloco lido', 'blocos lidos')}`,
             }));
     }
+
+    const botaoLer = elemento('button', { type: 'button', class: 'primario', text: rotulo });
+    botaoLer.addEventListener('click', () => enquantoOcupado(botaoLer, 'Abrindo…', () => abrirLeitura(conteudo.id)));
+
+    const botaoExcluir = elemento('button', {
+        type: 'button', class: 'discreto', text: 'Excluir', 'aria-label': `Excluir ${conteudo.titulo}`,
+    });
+    botaoExcluir.addEventListener('click', () => excluirConteudo(conteudo, botaoExcluir));
 
     return elemento('li', { class: 'item' },
         elemento('div', {},
@@ -243,27 +346,20 @@ function itemConteudo(conteudo, progresso) {
             elemento('p', { class: 'meta', text: meta.join(', ') }),
             conteudo.descricao ? elemento('p', { class: 'descricao', text: conteudo.descricao }) : null,
             andamento),
-        elemento('div', { class: 'item-acoes' },
-            elemento('button', {
-                type: 'button', class: 'primario', text: rotulo,
-                onclick: () => abrirLeitura(conteudo.id),
-            }),
-            elemento('button', {
-                type: 'button', class: 'discreto', text: 'Excluir',
-                'aria-label': `Excluir ${conteudo.titulo}`,
-                onclick: () => excluirConteudo(conteudo),
-            })));
+        elemento('div', { class: 'item-acoes' }, botaoLer, botaoExcluir));
 }
 
-async function excluirConteudo(conteudo) {
+async function excluirConteudo(conteudo, botao) {
     if (!window.confirm(`Excluir "${conteudo.titulo}"? O histórico de leitura continua guardado.`)) return;
-    try {
-        await api(`/api/conteudos/${codificar(conteudo.id)}`, { metodo: 'DELETE' });
-        avisar('Texto excluído.');
-        carregarConteudos();
-    } catch (erro) {
-        avisar(erro.message, 'erro');
-    }
+    await enquantoOcupado(botao, 'Excluindo…', async () => {
+        try {
+            await api(`/api/conteudos/${codificar(conteudo.id)}`, { metodo: 'DELETE' });
+            avisar('Texto excluído.');
+            await carregarConteudos();
+        } catch (erro) {
+            avisar(erro.message, 'erro');
+        }
+    });
 }
 
 /* ---------- Cadastro de texto ---------- */
@@ -329,21 +425,24 @@ function iniciarCadastro() {
             descricao: $('campo-descricao').value.trim() || null,
             blocos: separarBlocos($('campo-texto').value),
         };
-        try {
-            const criado = await api('/api/conteudos', { metodo: 'POST', corpo });
-            fecharFormulario();
-            avisar(`"${criado.titulo}" foi salvo em ${plural(criado.totalBlocos, 'bloco', 'blocos')}.`);
-            carregarConteudos();
-        } catch (erro) {
-            mostrarErrosFormulario(erro);
-        }
+        await enquantoOcupado($('botao-salvar-texto'), 'Salvando…', async () => {
+            try {
+                const criado = await api('/api/conteudos', { metodo: 'POST', corpo });
+                fecharFormulario();
+                avisar(`"${criado.titulo}" foi salvo em ${plural(criado.totalBlocos, 'bloco', 'blocos')}.`);
+                carregarConteudos();
+            } catch (erro) {
+                mostrarErrosFormulario(erro);
+            }
+        });
     });
 }
 
 /* ---------- Leitura ---------- */
 
 async function abrirLeitura(conteudoId) {
-    if (!exigirLeitor()) return;
+    if (!exigirLeitor() || estado.leitura || estado.ocupado) return;
+    estado.ocupado = true;   // impede abrir dois textos ao mesmo tempo
     try {
         const progresso = await api(
             `/api/progresso?leitor=${codificar(estado.leitor)}&conteudoId=${codificar(conteudoId)}`);
@@ -362,6 +461,8 @@ async function abrirLeitura(conteudoId) {
     } catch (erro) {
         estado.leitura = null;
         avisar(erro.message, 'erro');
+    } finally {
+        estado.ocupado = false;
     }
 }
 
@@ -372,6 +473,7 @@ async function mostrarBloco(ordem) {
 
     const lidos = leitura.sessao.blocosConcluidos;
     $('leitura-posicao').textContent = `Bloco ${bloco.ordem} de ${bloco.totalBlocos}`;
+    document.title = `${leitura.titulo} (${bloco.ordem}/${bloco.totalBlocos}) - ${TITULO_PAGINA}`;
     preencherCaule($('caule'), leitura.sessao.totalBlocos, lidos, bloco.ordem);
     $('leitura-titulo-bloco').textContent = bloco.titulo || `Bloco ${bloco.ordem}`;
     $('leitura-texto').textContent = bloco.texto;
@@ -395,59 +497,76 @@ function primeiroBlocoNaoLido(sessao) {
     return sessao.totalBlocos;
 }
 
-async function concluirBlocoAtual() {
-    const leitura = estado.leitura;
-    if (!leitura?.bloco) return;
-    const botao = $('botao-concluir');
-    botao.disabled = true;
-    try {
-        const sessao = await api(
-            `/api/sessoes/${codificar(leitura.sessao.id)}/blocos/${leitura.bloco.ordem}/concluir`,
-            { metodo: 'POST' });
-        leitura.sessao = sessao;
+function concluirBlocoAtual() {
+    return acaoDeLeitura(async () => {
+        const leitura = estado.leitura;
+        if (!leitura?.bloco) return;
+        try {
+            const sessao = await api(
+                `/api/sessoes/${codificar(leitura.sessao.id)}/blocos/${leitura.bloco.ordem}/concluir`,
+                { metodo: 'POST' });
+            leitura.sessao = sessao;
 
-        if (sessao.status === 'CONCLUIDA') {
-            mostrarResumo(sessao);
-            return;
+            if (sessao.status === 'CONCLUIDA') {
+                mostrarResumo(sessao);
+                return;
+            }
+            await mostrarBloco(leitura.bloco.proximo ?? primeiroBlocoNaoLido(sessao));
+            $('leitura-titulo-bloco').focus({ preventScroll: true });
+        } catch (erro) {
+            avisar(erro.message, 'erro');
         }
-        await mostrarBloco(leitura.bloco.proximo ?? primeiroBlocoNaoLido(sessao));
-        $('leitura-titulo-bloco').focus({ preventScroll: true });
-    } catch (erro) {
-        avisar(erro.message, 'erro');
-    } finally {
-        botao.disabled = false;
-    }
+    });
 }
 
-async function voltarBloco() {
-    const leitura = estado.leitura;
-    if (!leitura?.bloco || leitura.bloco.anterior === null) return;
-    try {
-        await mostrarBloco(leitura.bloco.anterior);
-        $('leitura-titulo-bloco').focus({ preventScroll: true });
-    } catch (erro) {
-        avisar(erro.message, 'erro');
+function voltarBloco() {
+    return acaoDeLeitura(async () => {
+        const leitura = estado.leitura;
+        if (!leitura?.bloco || leitura.bloco.anterior === null) return;
+        try {
+            await mostrarBloco(leitura.bloco.anterior);
+            $('leitura-titulo-bloco').focus({ preventScroll: true });
+        } catch (erro) {
+            avisar(erro.message, 'erro');
+        }
+    });
+}
+
+/** Setas do teclado na tela de leitura: → conclui/avança, ← volta. */
+function atalhosDeLeitura(evento) {
+    if ($('tela-leitura').hidden || evento.altKey || evento.ctrlKey || evento.metaKey || evento.shiftKey) return;
+    if (evento.target.closest?.('input, textarea, select, [contenteditable="true"]')) return;
+    if (evento.key === 'ArrowRight') {
+        evento.preventDefault();
+        concluirBlocoAtual();
+    } else if (evento.key === 'ArrowLeft') {
+        evento.preventDefault();
+        voltarBloco();
     }
 }
 
 function pausarLeitura() {
-    pararCronometro();
-    estado.leitura = null;
-    mostrarTela('biblioteca');
-    avisar('Leitura pausada. Ela continua de onde você parou.');
-    carregarConteudos();
+    return acaoDeLeitura(async () => {
+        pararCronometro();
+        estado.leitura = null;
+        mostrarTela('biblioteca');
+        avisar('Leitura pausada. Ela continua de onde você parou.');
+        carregarConteudos();
+    });
 }
 
-async function encerrarLeitura() {
-    const leitura = estado.leitura;
-    if (!leitura) return;
-    if (!window.confirm('Encerrar esta leitura agora? O bloco em que você parou fica registrado.')) return;
-    try {
-        const sessao = await api(`/api/sessoes/${codificar(leitura.sessao.id)}/abandonar`, { metodo: 'POST' });
-        mostrarResumo(sessao);
-    } catch (erro) {
-        avisar(erro.message, 'erro');
-    }
+function encerrarLeitura() {
+    return acaoDeLeitura(async () => {
+        const leitura = estado.leitura;
+        if (!leitura) return;
+        if (!window.confirm('Encerrar esta leitura agora? O bloco em que você parou fica registrado.')) return;
+        try {
+            const sessao = await api(`/api/sessoes/${codificar(leitura.sessao.id)}/abandonar`, { metodo: 'POST' });
+            mostrarResumo(sessao);
+        } catch (erro) {
+            avisar(erro.message, 'erro');
+        }
+    });
 }
 
 /* ---------- Cronômetro e tamanho do texto ---------- */
@@ -487,7 +606,12 @@ function mostrarResumo(sessao) {
     $('resumo-titulo').textContent = concluida
         ? 'Leitura concluída'
         : `Leitura encerrada no bloco ${sessao.blocoAbandono}`;
-    preencherCaule($('resumo-caule'), sessao.totalBlocos, sessao.blocosConcluidos, null);
+    // As folhas lidas "brotam" uma após a outra: o único movimento automático da interface.
+    const caule = $('resumo-caule');
+    caule.classList.remove('animar');
+    preencherCaule(caule, sessao.totalBlocos, sessao.blocosConcluidos, null);
+    void caule.offsetWidth;   // reinicia a animação se o resumo for exibido de novo
+    caule.classList.add('animar');
 
     const metricas = [
         ['Tempo de leitura', duracaoPorExtenso(sessao.duracaoSegundos)],
@@ -520,6 +644,12 @@ function iniciar() {
     $('botao-anterior').addEventListener('click', voltarBloco);
     $('botao-pausar').addEventListener('click', pausarLeitura);
     $('botao-encerrar').addEventListener('click', encerrarLeitura);
+    document.addEventListener('keydown', atalhosDeLeitura);
+
+    $('campo-busca').addEventListener('input', () => {
+        estado.busca = $('campo-busca').value;
+        renderizarLista();
+    });
     $('botao-voltar').addEventListener('click', () => {
         mostrarTela('biblioteca');
         carregarConteudos();

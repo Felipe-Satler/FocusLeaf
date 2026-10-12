@@ -196,6 +196,52 @@ button:disabled {
     cursor: not-allowed;
 }
 
+/* Botão aguardando o servidor: continua legível, só indica a espera. */
+button[aria-busy="true"] {
+    opacity: 0.8;
+    cursor: progress;
+}
+
+/* Botão com aparência de link, para ações secundárias dentro de uma frase. */
+button.link {
+    padding: 0;
+    border: 0;
+    background: none;
+    color: var(--seiva);
+    font-weight: 400;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+}
+
+button.link:hover {
+    color: var(--seiva-forte);
+}
+
+kbd {
+    display: inline-block;
+    min-width: 1.6em;
+    padding: 0 5px;
+    border: 1px solid var(--linha);
+    border-bottom-width: 2px;
+    border-radius: 4px;
+    background: var(--folha);
+    color: var(--tinta);
+    font-family: inherit;
+    font-size: 13px;
+    line-height: 1.5;
+    text-align: center;
+}
+
+/* Visível só para leitores de tela. */
+.oculto {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+}
+
 :focus-visible {
     outline: 3px solid var(--seiva);
     outline-offset: 2px;
@@ -228,10 +274,34 @@ code {
 /* ---------- Biblioteca ---------- */
 
 .leitor {
+    padding-bottom: 20px;
+    border-bottom: 1px solid var(--linha);
+}
+
+.leitor-atual {
+    margin: 0;
+    color: var(--tinta-suave);
+}
+
+.leitor-atual strong {
+    color: var(--tinta);
+}
+
+.leitor-atual .link {
+    margin-left: 10px;
+}
+
+.form-leitor {
     display: grid;
     gap: 8px;
-    padding-bottom: 24px;
-    border-bottom: 1px solid var(--linha);
+}
+
+.busca {
+    margin-bottom: 12px;
+}
+
+.busca input {
+    max-width: 420px;
 }
 
 .cabecalho-lista {
@@ -473,6 +543,24 @@ h1 {
     margin-top: 16px;
 }
 
+#tela-leitura[aria-busy="true"] .navegacao button {
+    cursor: progress;
+}
+
+.atalhos {
+    margin: 14px 0 0;
+    color: var(--tinta-suave);
+    font-size: 14px;
+    text-align: right;
+}
+
+/* Em telas de toque não há teclado físico: a dica sai de cena. */
+@media (hover: none) {
+    .atalhos {
+        display: none;
+    }
+}
+
 /* ---------- Resumo ---------- */
 
 .metricas {
@@ -497,6 +585,23 @@ h1 {
 #tela-resumo .caule .folhinha {
     width: 22px;
     height: 22px;
+}
+
+/* Ao fim da leitura, as folhas lidas brotam uma após a outra. */
+@keyframes brotar {
+    from {
+        background-color: var(--broto);
+        scale: 0.5;
+    }
+    to {
+        background-color: var(--seiva);
+        scale: 1;
+    }
+}
+
+.caule.animar .folhinha.lida {
+    animation: brotar 0.45s ease-out both;
+    animation-delay: calc(var(--i) * 110ms + 150ms);
 }
 
 /* Modo foco: durante a leitura, só o texto e os controles ficam na tela. */
@@ -559,5 +664,9 @@ body[data-tela="leitura"] .topo {
 @media (prefers-reduced-motion: reduce) {
     .folhinha {
         transition: none;
+    }
+
+    .caule.animar .folhinha.lida {
+        animation: none;
     }
 }
